@@ -8,6 +8,11 @@ AMeleeEnemyBase::AMeleeEnemyBase()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+	CollisionComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("Collision Box"));
+	RootComponent = CollisionComponent;
+
+
 	EnemyComponent = CreateDefaultSubobject<UEnemyComponent>(TEXT("Enemy Component"));
 	EnemyComponent->bIsMelee = true;
 
@@ -34,7 +39,7 @@ void AMeleeEnemyBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 
 }
 
-void AMeleeEnemyBase::RecieveDamage(float Damage)
+void AMeleeEnemyBase::RecieveDamage(AActor* Instigator, float Damage)
 {
 	if ( (EnemyComponent->Health) - Damage <= 0)
 	{
@@ -54,9 +59,9 @@ void AMeleeEnemyBase::Terminate()
 	Destroy();
 }
 
-void AMeleeEnemyBase::Attack(AActor* Actor, float Damage)
+void AMeleeEnemyBase::Attack(APlayerCharacter* Player, float Damage)
 {
-	if (Actor)
+	if (Player)
 	{
 
 	}

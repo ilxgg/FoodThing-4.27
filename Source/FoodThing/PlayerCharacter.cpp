@@ -12,16 +12,21 @@ APlayerCharacter::APlayerCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 
 	PlayerMaxHealth = 5;
-	PlayerCurrentHealth = PlayerMaxHealth;
+	
 	PlayerSpeed = 1000.f;
 	MeleeDamage = 55.f;
 	RangedDamage = 35.f;
 	bIsUsingMelee = true;
+	bIsAttacking = false;
+
+	FireRate = 1.f;
+	MeleeRate = 3.f;
+	
 
 	MeleeRange = CreateDefaultSubobject<UBoxComponent>(TEXT("Melee Range"));
 	MeleeRange->SetupAttachment(RootComponent);
 
-	GetCharacterMovement()->MaxWalkSpeed = PlayerSpeed;
+	
 	
 }
 
@@ -29,6 +34,15 @@ APlayerCharacter::APlayerCharacter()
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	TimeBetweenProjAttacks = (1 / FireRate);
+	TimeLeftUntilProjAttack = 0;
+
+	TimeBetweenMeleeAttacks = (1 / MeleeRate);
+	TimeLeftUntilMeleeAttack = 0;
+	PlayerCurrentHealth = PlayerMaxHealth;
+
+
+	GetCharacterMovement()->MaxWalkSpeed = PlayerSpeed;
 	
 }
 
@@ -36,6 +50,45 @@ void APlayerCharacter::BeginPlay()
 void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (bIsAttacking)
+	{
+		if (bIsUsingMelee)
+		{
+			if (TimeLeftUntilMeleeAttack <= 0)
+			{
+				TimeLeftUntilMeleeAttack = TimeBetweenMeleeAttacks;
+				//Executes if melee weapon is currently equipped
+				UE_LOG(LogTemp, Warning, TEXT("Melee Attack"))
+					//swing melee weapon
+			}
+		}
+		else if (!bIsUsingMelee)
+		{
+			//Checks if the amount of time passed is more than or equal to the rate of fire, if so then shoot
+			if (TimeLeftUntilProjAttack <= 0)
+			{
+				TimeLeftUntilProjAttack = TimeBetweenProjAttacks;
+				//Executes if ranged weapon is currently equipped
+
+				const FTransform ProjSpawn = FTransform(FRotator(0.f, 0.f, GetActorRotation().Yaw), GetActorLocation(), FVector(1.f, 1.f, 1.f));
+				APlayerProjectile* SpawnedProj = GetWorld()->SpawnActorDeferred<APlayerProjectile>(PlayerProjectile.Get(), ProjSpawn);
+				SpawnedProj->bIsFromPlayer = true;
+				SpawnedProj->Damage = RangedDamage;
+				SpawnedProj->InitSpeed = 800;
+				SpawnedProj->ProjectileMovement->InitialSpeed = SpawnedProj->InitSpeed;
+				SpawnedProj->SetActorRotation(FRotator(0.f, GetActorRotation().Yaw, 0.f));
+				SpawnedProj->FinishSpawning(ProjSpawn);
+				
+			}
+			
+
+		}
+		
+	}
+
+	TimeLeftUntilMeleeAttack -= DeltaTime;
+	TimeLeftUntilProjAttack -= DeltaTime;
 
 }
 
@@ -47,6 +100,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAxis("MoveUp", this, &APlayerCharacter::MoveUp);
 	PlayerInputComponent->BindAxis("MoveRight", this, &APlayerCharacter::MoveRight);
 	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &APlayerCharacter::Attack);
+	PlayerInputComponent->BindAction("Attack", IE_Released, this, &APlayerCharacter::StopAttack);
 	PlayerInputComponent->BindAction("SwitchWeapon", IE_Pressed, this, &APlayerCharacter::SwitchWeapons);
 
 }
@@ -63,27 +117,12 @@ void APlayerCharacter::MoveRight(float Value)
 
 void APlayerCharacter::Attack()
 {
+	bIsAttacking = true;
+}
 
-	if (bIsUsingMelee)
-	{
-		//Executes if melee weapon is currently equipped
-		UE_LOG(LogTemp, Warning, TEXT("Melee Attack"))
-		//swing melee weapon
-	} 
-	else 
-	{
-		//Executes if ranged weapon is currently equipped
-
-		const FTransform ProjSpawn = FTransform(FRotator(0.f, 0.f, GetActorRotation().Yaw), GetActorLocation(), FVector(1.f, 1.f, 1.f));
-		APlayerProjectile* SpawnedProj = GetWorld()->SpawnActorDeferred<APlayerProjectile>(PlayerProjectile.Get(), ProjSpawn);
-		SpawnedProj->bIsFromPlayer = true;
-		SpawnedProj->Damage = RangedDamage;
-		SpawnedProj->InitSpeed = 800;
-		SpawnedProj->ProjectileMovement->InitialSpeed = SpawnedProj->InitSpeed;
-		SpawnedProj->SetActorRotation(FRotator(0.f, GetActorRotation().Yaw, 0.f));
-		SpawnedProj->FinishSpawning(ProjSpawn);
-
-	}
+void APlayerCharacter::StopAttack()
+{
+	bIsAttacking = false;
 }
 
 void APlayerCharacter::SwitchWeapons()
